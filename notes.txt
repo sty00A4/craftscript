@@ -1,0 +1,57 @@
+\n ;                                                                statements devider
+if while repeat for end macro with return                           statement beginning (spaces required)
+
+!                                                                   do unary operation following
+is                                                                  store binary operation (spaces required)
+as                                                                  type definition/cast binary operation (spaces required)
+,                                                                   tuple multi operation
+and or                                                              logic binary operation (spaces required)
+cont                                                                'contains' binary operation (spaces required)
+= ~= < > <= >=                                                      comparison binary operation
++ -                                                                 arithmatic binary operation
+* / // %                                                            term binary operation
+^                                                                   power binary operation
+:                                                                   index binary operation
+len                                                                 length unary operation preceding (spaces required)
+..                                                                  range binary operation (spaces required)
+number "chars" [expr,expr,...] name (expr) type null bool           atom
+
+
+
+ifNode
+    if [expression]
+        [statements]
+    (elif [expression]
+        [statements])
+    (else
+        [statements])
+    end
+
+whileNode
+    while [expression] [statement]
+
+    while [expression]
+        [statements]
+    end
+
+repeatNode
+    repeat [expression] [statement]
+
+    repeat [expression]
+        [statements]
+    end
+
+macroNode
+    macro [name] [statement]
+
+    macro [name]
+        [statements]
+    end
+
+withNode
+    with [name]
+        [statements]
+    end
+
+returnNode
+    return [expression]
