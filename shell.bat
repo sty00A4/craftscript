@@ -1,1 +1,1 @@
-lua shell.lua
+start lua shell.lua
