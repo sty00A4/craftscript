@@ -877,8 +877,8 @@ local function debugContext(context)
 end
 local function test()
     local tokens, ast, value, context, returning, err
-    local file = io.open("test.l", "r")
-    tokens, err = lex("test.l", file:read("*a")) if err then print(err) return end
+    local file = io.open("test.crs", "r")
+    tokens, err = lex("test.crs", file:read("*a")) if err then print(err) return end
     file:close()
     --for _,t in pairs(tokens) do io.write(tostring(t)," ") end print("")
     ast, err = parse(tokens) if err then print(err) return end
@@ -903,4 +903,9 @@ local function execute(text, context)
     value, context, returning, err = interpret(ast) if err then return nil, context, false, err end
     return value, context, returning
 end
-return { run = run, test = test, execute = execute }
+return {
+    run = run, test = test, execute = execute, lex = lex, parse = parse, interpret = interpret,
+    T = T, KW = KW, TKW = TKW, STRDEF = STRDEF, NULL = NULL, BOOLS = BOOLS, SMBLS = SMBLS,
+    Position = Position, PositionRange = PositionRange, Error = Error, Token = Token,
+    Null = Null, Number = Number, Bool = Bool, String = String, Type = Type, Array = Array,
+}
