@@ -56,6 +56,46 @@ local function If(cond, body, else_body, pos)
         end
     })
 end
+---`node.while`
+---@param cond table
+---@param body table
+---@param pos table
+---@return table
+local function While(cond, body, pos)
+    expect("cond", cond, "node")
+    expect("body", body, "node")
+    expect("pos", pos, "position")
+    return setmetatable({ cond = cond, body = body, pos = pos, copy = table.copy }, {
+        __name = "node.while", __tostring = function(self)
+            local str = ("while %s do"):format(self.cond)
+            if metatype(self.body) ~= "node.body" then str = str .. " " end
+            str = str .. tostring(self.body)
+            if metatype(self.body) ~= "node.body" then str = str .. " " end
+            str = str .. "end"
+            return str
+        end
+    })
+end
+---`node.repeat`
+---@param expr table
+---@param body table
+---@param pos table
+---@return table
+local function Repeat(expr, body, pos)
+    expect("cond", expr, "node")
+    expect("body", body, "node")
+    expect("pos", pos, "position")
+    return setmetatable({ expr = expr, body = body, pos = pos, copy = table.copy }, {
+        __name = "node.repeat", __tostring = function(self)
+            local str = ("for _ = 1, %s do"):format(self.expr)
+            if metatype(self.body) ~= "node.body" then str = str .. " " end
+            str = str .. tostring(self.body)
+            if metatype(self.body) ~= "node.body" then str = str .. " " end
+            str = str .. "end"
+            return str
+        end
+    })
+end
 ---`node.assign`
 ---@param name table
 ---@param expr table
@@ -277,6 +317,7 @@ local function parse(path, tokens)
         local nodes = {}
         while not table.contains(endTokens, token.type) do
             local node, err = stat() if err then return nil, err end
+            print(token)
             if node then stop = node.pos.stop lnStop = node.pos.lnStop table.insert(nodes, node) end
             advance_line()
         end
@@ -352,7 +393,6 @@ local function parse(path, tokens)
         local _body
         if token.type ~= "eol" then
             _body, err = stat() if err then return nil, err end
-            advance_line()
         else
             advance_line()
             _body, err = body({"else", "end"}) if err then return nil, err end
@@ -369,15 +409,53 @@ local function parse(path, tokens)
                 if token.type ~= "end" then return nil, expected("end", token) end
                 advance()
                 if token.type ~= "eol" then return nil, expected("eol", token) end
-                advance_line()
             end
             return If(cond, _body, else_body, Position(lnStart, lnStop, start, stop, path))
         end
         if token.type ~= "end" then return nil, expected("end", token) end
+        lnStop = pos.lnStop
         advance()
         if token.type ~= "eol" then return nil, expected("eol", token) end
-        advance_line()
         return If(cond, _body, nil, Position(lnStart, lnStop, start, stop, path))
+    end
+    _while = function()
+        local lnStart, lnStop = pos.lnStart, pos.lnStop
+        local start, stop = pos.start, pos.stop
+        if token.type ~= "while" then return nil, expected("while", token) end
+        advance()
+        local cond, err = expr() if err then return nil, err end
+        local _body
+        if token.type ~= "eol" then
+            _body, err = stat() if err then return nil, err end
+            advance_line()
+        else
+            advance_line()
+            _body, err = body({"end"}) if err then return nil, err end
+            lnStop = pos.lnStop
+            if token.type ~= "end" then return nil, expected("end", token) end
+            advance()
+            if token.type ~= "eol" then return nil, expected("eol", token) end
+        end
+        return While(cond, _body, Position(lnStart, lnStop, start, stop, path))
+    end
+    _repeat = function()
+        local lnStart, lnStop = pos.lnStart, pos.lnStop
+        local start, stop = pos.start, pos.stop
+        if token.type ~= "repeat" then return nil, expected("repeat", token) end
+        advance()
+        local _expr, err = expr() if err then return nil, err end
+        local _body
+        if token.type ~= "eol" then
+            _body, err = stat() if err then return nil, err end
+        else
+            advance_line()
+            _body, err = body({"end"}) if err then return nil, err end
+            lnStop = pos.lnStop
+            if token.type ~= "end" then return nil, expected("end", token) end
+            advance()
+            if token.type ~= "eol" then return nil, expected("eol", token) end
+        end
+        return Repeat(_expr, _body, Position(lnStart, lnStop, start, stop, path))
     end
     expr = function()
         local node, err = atom() if err then return nil, err end

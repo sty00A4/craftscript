@@ -1,4 +1,2 @@
-if      true    print! "yes"
-else if true    print! "maybe"
-else if true    print! "common"
-else            print! "no"
+repeat 10 print! "yes"
+while true print! "you will never escape..."
