@@ -7,7 +7,7 @@ local keywords = {
     "then", "do", "end",
     "and", "or", "not"
 }
-local symbols = { "=", "!", "@", ",", "+", "-", "*", "/", "^", "?", "==", "!=", "<", ">", "(", ")", "[", "]", "{", "}" }
+local symbols = { "=", "!", "@", ",", ":", "+", "-", "*", "/", "^", "?", "==", "!=", "<", ">", "(", ")", "[", "]", "{", "}" }
 
 local function Token(typ, value, pos)
     expect("typ", typ, "string")

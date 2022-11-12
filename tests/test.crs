@@ -1,2 +1,1 @@
-turtle up!
-turtle down!
+print! (tostring! 1)

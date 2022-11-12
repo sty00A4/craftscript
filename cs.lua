@@ -14,7 +14,7 @@ file:close()
 
 local tokens, err = cs.lexer.lex(path, text) if err then print(err) return end
 if tokens then
-    for ln, line in ipairs(tokens) do print(tostring(ln).." "..table.join(line, " ")) end
+    -- for ln, line in ipairs(tokens) do print(tostring(ln).." "..table.join(line, " ")) end
     local ast ast, err = cs.parser.parse(path, tokens) if err then print(err) return end
     if ast then print(ast) end
 end
