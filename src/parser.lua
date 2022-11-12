@@ -426,14 +426,14 @@ local function parse(path, tokens)
                     or nil
                 )
             if token.type == "=" then -- assign
-                if not node then return nil, unexpeted(token) end
                 stop = pos.stop
+                if not node then return nil, unexpeted(token) end
                 advance()
                 local _expr, err = expr() if err then return nil, err end
                 node = Assign(node, _expr or {}, scoping, Position(ln, ln, start, stop, path))
             elseif token.type == "!" then -- call
-                if not node then return nil, unexpeted(token) end
                 stop = pos.stop
+                if not node then return nil, unexpeted(token) end
                 advance()
                 if token.type ~= endToken then
                     local _args, err = args() if err then return nil, err end
@@ -443,12 +443,7 @@ local function parse(path, tokens)
                     node = Call(node, nil, Position(ln, ln, start, stop, path))
                 end
                 if scoping ~= "" then return nil, unexpetedNode(node) end
-            end
-        end
-        if node then
-            if not table.contains({"node.assign", "node.call"}, metatype(node)) then
-                return nil, unexpetedNode(node)
-            end
+            else break end
         end
         return node
     end
