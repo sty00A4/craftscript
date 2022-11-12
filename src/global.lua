@@ -12,6 +12,14 @@ string.split = function(s, sep)
     if #temp > 0 then table.insert(t, temp) end
     return t
 end
+---@return string
+function repr(o)
+    local str = string.format("%q", o):gsub("\\\n", "\\n")
+    str = str:gsub("\\\t", "\\t")
+    str = str:gsub("\\\r", "\\r")
+    str = str:gsub("\\\f", "\\f")
+    return str
+end
 ---@param t table
 table.contains = function(t, e)
     for _, v in pairs(t) do if v == e then return true end end
