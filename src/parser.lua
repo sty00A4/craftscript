@@ -395,6 +395,9 @@ local function parse(path, tokens)
     local function advance_line() ln = ln + 1 idx = 1 update() end
     advance_line()
     local chunk, body, stat, _if, _while, _repeat, _for, args, expr, atom
+    -- todo procedure
+    -- todo binary operation
+    -- todo unary operation
     chunk = function()
         local lnStart, lnStop = pos.lnStart, pos.lnStop
         local start, stop = pos.start, pos.stop
