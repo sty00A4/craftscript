@@ -39,9 +39,20 @@ local function If(cond, body, else_body, pos)
     expect("pos", pos, "position")
     return setmetatable({ cond = cond, body = body, else_body = else_body, pos = pos, copy = table.copy }, {
         __name = "node.if", __tostring = function(self)
-            local str = ("if %s then%s"):format(self.cond, self.body)
-            if self.else_body then str = str .. ("else%s"):format(self.else_body) end
-            return str .. "end"
+            local str = ("if %s then"):format(self.cond)
+            if metatype(self.body) ~= "node.body" then str = str .. " " end
+            str = str .. tostring(self.body)
+            if metatype(self.body) ~= "node.body" then str = str .. " " end
+            if self.else_body then
+                str = str .. "else"
+                if metatype(self.else_body) ~= "node.body" and metatype(self.else_body) ~= "node.if" then str = str .. " " end
+                str = str .. tostring(self.else_body)
+                if metatype(self.else_body) ~= "node.body" then str = str .. " " end
+                if metatype(self.else_body) ~= "node.if" then str = str .. "end" end
+            else
+                str = str .. "end"
+            end
+            return str
         end
     })
 end
@@ -338,25 +349,28 @@ local function parse(path, tokens)
         if token.type ~= "if" then return nil, expected("if", token) end
         advance()
         local cond, err = expr() if err then return nil, err end
-        if token.type ~= "eol" then return nil, expected("eol", token) end
-        advance_line()
-        local _body _body, err = body({"else", "end"}) if err then return nil, err end
+        local _body
+        if token.type ~= "eol" then
+            _body, err = stat() if err then return nil, err end
+            advance_line()
+        else
+            advance_line()
+            _body, err = body({"else", "end"}) if err then return nil, err end
+        end
         if token.type == "else" then
             local else_body
             advance()
-            if token.type == "if" then
-                else_body, err = _if() if err then return nil, err end
-                stop = else_body.pos.stop lnStop = else_body.pos.lnStop
-                return If(cond, _body, else_body, Position(lnStart, lnStop, start, stop, path))
+            if token.type ~= "eol" then
+                else_body, err = stat() if err then return nil, err end
+            else
+                advance_line()
+                else_body, err = body({"end"}) if err then return nil, err end
+                stop = pos.stop lnStop = pos.lnStop
+                if token.type ~= "end" then return nil, expected("end", token) end
+                advance()
+                if token.type ~= "eol" then return nil, expected("eol", token) end
+                advance_line()
             end
-            if token.type ~= "eol" then return nil, expected("eol", token) end
-            advance_line()
-            else_body, err = body({"end"}) if err then return nil, err end
-            stop = pos.stop lnStop = pos.lnStop
-            if token.type ~= "end" then return nil, expected("end", token) end
-            advance()
-            if token.type ~= "eol" then return nil, expected("eol", token) end
-            advance_line()
             return If(cond, _body, else_body, Position(lnStart, lnStop, start, stop, path))
         end
         if token.type ~= "end" then return nil, expected("end", token) end

@@ -1,7 +1,4 @@
-
-
-
-name = "sty00a4"
-print! name
-
-
+if      true    print! "yes"
+else if true    print! "maybe"
+else if true    print! "common"
+else            print! "no"
