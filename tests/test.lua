@@ -1,5 +1,1 @@
-while true do
-print("once")
-break
-end
-return
+print(not false and true)

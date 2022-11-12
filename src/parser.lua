@@ -1,5 +1,39 @@
 local lexer = require("src.lexer")
 
+local precedence = {
+    { "or" },
+    { "and" },
+    { "==", "~=", "<", ">", "<=", ">=" },
+    { ".." },
+    { "+", "-" },
+    { "*", "/" },
+    { "-", "not" },
+    { "^" },
+    { "#" },
+}
+local function precedenceGT(type1, type2)
+    local n1 = #precedence + 1
+    for i, types in ipairs(precedence) do
+        if table.contains(types, type1) then n1 = i break end
+    end
+    local n2 = #precedence + 1
+    for i, types in ipairs(precedence) do
+        if table.contains(types, type2) then n2 = i break end
+    end
+    return n1 > n2
+end
+local function precedenceEQ(type1, type2)
+    local n1 = #precedence + 1
+    for i, types in ipairs(precedence) do
+        if table.contains(types, type1) then n1 = i break end
+    end
+    local n2 = #precedence + 1
+    for i, types in ipairs(precedence) do
+        if table.contains(types, type2) then n2 = i break end
+    end
+    return n1 == n2
+end
+
 ---`node.chunk`
 ---@param nodes table
 ---@param pos table
@@ -329,6 +363,75 @@ local function Return(node, pos)
         end
     })
 end
+---`node.binary`
+---@param op table
+---@param left table
+---@param right table
+---@param pos table
+---@return table
+local function Binary(op, left, right, pos)
+    expect("op", op, "token")
+    expect("left", left, "node")
+    expect("right", right, "node")
+    expect("pos", pos, "position")
+    return setmetatable({ op = op, left = left, right = right, pos = pos, copy = table.copy }, {
+        __name = "node.binary", __tostring = function(self)
+            local str = ""
+            if metatype(self.left) == "node.binary" then
+                if precedenceGT(self.left.op.type, self.op.type) or precedenceEQ(self.left.op.type, self.op.type) then
+                    str = "(" .. tostring(self.left) .. ")"
+                else str = tostring(self.left) end
+            elseif metatype(self.left) == "node.unary" then
+                if precedenceEQ(self.left.op.type, self.op.type) then
+                    str = "(" .. tostring(self.left) .. ")"
+                else
+                    str = tostring(self.left)
+                end
+            else
+                str = tostring(self.left)
+            end
+            str = str .. " " .. self.op.type .. " "
+            if metatype(self.right) == "node.binary" then
+                if not precedenceGT(self.right.op.type, self.op.type) or precedenceEQ(self.right.op.type, self.op.type) then
+                    str = str .. "(" .. tostring(self.right) .. ")"
+                else str = str .. tostring(self.right) end
+            elseif metatype(self.right) == "node.unary" then
+                if precedenceEQ(self.right.op.type, self.op.type) then
+                    str = str .. "(" .. tostring(self.right) .. ")"
+                else
+                    str = str .. tostring(self.right)
+                end
+            else
+                str = str .. tostring(self.right)
+            end
+            return str
+        end
+    })
+end
+---`node.unary`
+---@param op table
+---@param node table
+---@param pos table
+---@return table
+local function Unary(op, node, pos)
+    expect("op", op, "token")
+    expect("node", node, "node")
+    expect("pos", pos, "position")
+    return setmetatable({ op = op, node = node, pos = pos, copy = table.copy }, {
+        __name = "node.unary", __tostring = function(self)
+            if metatype(self.node) == "node.binary" then
+                if precedenceGT(self.node.op.type, self.op.type) or precedenceEQ(self.node.op.type, self.op.type) then
+                    return self.op.type .. " (" .. tostring(self.node) .. ")"
+                end
+            elseif metatype(self.node) == "node.unary" then
+                if precedenceEQ(self.node.op.type, self.op.type) then
+                    return self.op.type .. " (" .. tostring(self.node) .. ")"
+                end
+            end
+            return self.op.type.. " " .. tostring(self.node)
+        end
+    })
+end
 
 local nodeNames = {
     ["node.chunk"] = "chunk",
@@ -394,7 +497,17 @@ local function parse(path, tokens)
     local function advance() idx = idx + 1 update() end
     local function advance_line() ln = ln + 1 idx = 1 update() end
     advance_line()
-    local chunk, body, stat, _if, _while, _repeat, _for, args, expr, atom
+    local function binary(ops, f)
+        local left, err = f() if err then return nil, err end
+        while table.contains(ops, token.type) do
+            local op = token:copy()
+            advance()
+            local right right, err = f() if err then return nil, err end
+            left = Binary(op, left, right, Position(left.pos.lnStart, right.pos.lnStop, left.pos.start, right.pos.stop, path))
+        end
+        return left
+    end
+    local chunk, body, stat, _if, _while, _repeat, _for, args, expr, _or, _and, comp, concat, arith, term, factor, pow, len, atom
     -- todo procedure
     -- todo binary operation
     -- todo unary operation
@@ -440,7 +553,10 @@ local function parse(path, tokens)
         if token.type == "repeat" then return _repeat() end
         if token.type == "for" then return _for() end
         if token.type == "break" then
-            return Break(Position(token.pos.lnStart, token.pos.lnStop, token.pos.start, token.pos.stop, path))
+            node = Break(Position(token.pos.lnStart, token.pos.lnStop, token.pos.start, token.pos.stop, path))
+            advance()
+            if token.type ~= "eol" then return nil, unexpeted(token) end
+            return node
         end
         if token.type == "return" then
             advance()
@@ -450,7 +566,8 @@ local function parse(path, tokens)
             end
             local _node, err = expr() if err then return nil, err end
             stop = _node.pos.stop
-            return Return(_node, Position(ln, ln, start, stop, path))
+            if token.type ~= "eol" then return nil, unexpeted(token) end
+            node = Return(_node, Position(ln, ln, start, stop, path))
         end
         while token.type ~= endToken do
             local fieldPath = {}
@@ -607,8 +724,47 @@ local function parse(path, tokens)
         return nil, unexpeted(token)
     end
     expr = function()
-        local node, err = atom() if err then return nil, err end
+        local node, err = _or() if err then return nil, err end
         return node
+    end
+    _or = function()
+        return binary({"or"}, _and)
+    end
+    _and = function()
+        return binary({"and"}, comp)
+    end
+    comp = function()
+        return binary({"==", "~=", "<", ">", "<=", ">="}, concat)
+    end
+    concat = function()
+        return binary({".."}, arith)
+    end
+    arith = function()
+        return binary({"+", "-"}, term)
+    end
+    term = function()
+        return binary({"*", "/"}, factor)
+    end
+    factor = function()
+        if token.type == "-" or token.type == "not" then
+            local op = token:copy()
+            advance()
+            local node, err = factor() if err then return nil, err end
+            return Unary(op, node, Position(token.pos.lnStart, node.pos.lnStop, token.pos.start, node.pos.stop, path))
+        end
+        return pow()
+    end
+    pow = function()
+        return binary({"^"}, len)
+    end
+    len = function()
+        if token.type == "#" then
+            local op = token:copy()
+            advance()
+            local node, err = len() if err then return nil, err end
+            return Unary(op, node, Position(token.pos.lnStart, node.pos.lnStop, token.pos.start, node.pos.stop, path))
+        end
+        return atom()
     end
     args = function()
         local start, stop = pos.start, pos.stop

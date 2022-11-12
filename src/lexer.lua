@@ -7,7 +7,12 @@ local keywords = {
     "then", "do", "end", "in",
     "and", "or", "not"
 }
-local symbols = { "=", "!", "@", ",", ":", "+", "-", "*", "/", "^", "?", "==", "!=", "<", ">", "(", ")", "[", "]", "{", "}" }
+local symbols = {
+    "=", "!", ",", ":", "..",
+    "+", "-", "*", "/", "^", "#",
+    "?", "==", "~=", "<", ">", "<=", ">=",
+    "(", ")", "[", "]", "{", "}"
+}
 
 local function Token(typ, value, pos)
     expect("typ", typ, "string")
@@ -36,7 +41,11 @@ local function lex(path, text)
     local function next(ln, line)
         while table.contains({" ","\t","\r"}, char) and char ~= "" do advance(line) end
         if char == "" then return end
-        if char == "#" then while char ~= "" do advance(line) end return end
+        if char == "/" then
+            advance(line)
+            if char == "/" then while char ~= "" do advance(line) end return end
+            return Token("/", nil, Position(ln, ln, col, col, path))
+        end
         if table.containsStart(symbols, char) then
             local start, stop = col, col
             local symbol = char
