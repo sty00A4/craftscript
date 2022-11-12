@@ -219,18 +219,22 @@ local nodeNames = {
 ---@param token table
 ---@return string
 local function unexpeted(token)
+    expect("token", token, "token")
     return "ERROR: unexpected "..(lexer.tokenNames[token.type] or ("'"..token.type.."'")) -- get the token name
 end
 ---@param typ string
 ---@param token table
 ---@return string
 local function expected(typ, token)
+    expect("typ", typ, "string")
+    expect("token", token, "token")
     return "ERROR: expected "..(lexer.tokenNames[typ] or ("'"..typ.."'"))
     ..", but got "..(lexer.tokenNames[token.type] or ("'"..token.type.."'"))
 end
 ---@param node table
 ---@return string
 local function unexpetedNode(node)
+    expect("node", node, "node")
     return "ERROR: unexpected "..(nodeNames[metatype(node)] or metatype(node)) -- get the token name
 end
 ---@param path string
@@ -294,24 +298,36 @@ local function parse(path, tokens)
                 table.insert(fieldPath, _node)
                 stop = pos.stop
             end -- field path until end of line, '=' or '!'
+            node = #fieldPath > 1
+                and Field(fieldPath, Position(ln, ln, start, stop, path))
+                or (
+                    #fieldPath == 1
+                    and fieldPath[#fieldPath]
+                    or nil
+                )
             if token.type == "=" then -- assign
+                if not node then return nil, unexpeted(token) end
                 stop = pos.stop
                 advance()
                 local _expr, err = expr() if err then return nil, err end
-                node = Assign(node or Field(fieldPath, Position(ln, ln, start, stop, path)), _expr or {}, scoping, Position(ln, ln, start, stop, path))
+                node = Assign(node, _expr or {}, scoping, Position(ln, ln, start, stop, path))
             elseif token.type == "!" then -- call
+                if not node then return nil, unexpeted(token) end
                 stop = pos.stop
                 advance()
                 if token.type ~= endToken then
                     local _args, err = args() if err then return nil, err end
                     stop = _args.pos.stop
-                    node = Call(node or Field(fieldPath, Position(ln, ln, start, stop, path)), _args, Position(ln, ln, start, stop, path))
+                    node = Call(node, _args, Position(ln, ln, start, stop, path))
                 else
-                    node = Call(node or Field(fieldPath, Position(ln, ln, start, stop, path)), nil, Position(ln, ln, start, stop, path))
+                    node = Call(node, nil, Position(ln, ln, start, stop, path))
                 end
                 if scoping ~= "" then return nil, unexpetedNode(node) end
-            else
-                node = Field(fieldPath, Position(ln, ln, start, stop, path))
+            end
+        end
+        if node then
+            if not table.contains({"node.assign", "node.call"}, metatype(node)) then
+                return nil, unexpetedNode(node)
             end
         end
         return node
@@ -325,24 +341,29 @@ local function parse(path, tokens)
         if token.type ~= "eol" then return nil, expected("eol", token) end
         advance_line()
         local _body _body, err = body({"else", "end"}) if err then return nil, err end
-        local else_body
         if token.type == "else" then
+            local else_body
             advance()
             if token.type == "if" then
                 else_body, err = _if() if err then return nil, err end
                 stop = else_body.pos.stop lnStop = else_body.pos.lnStop
-            else
-                if token.type ~= "eol" then return nil, expected("eol", token) end
-                advance_line()
-                else_body, err = body({"end"}) if err then return nil, err end
-                stop = pos.stop lnStop = pos.lnStop
-                if token.type ~= "end" then return nil, expected("end", token) end
-                advance()
-                if token.type ~= "eol" then return nil, expected("eol", token) end
-                advance_line()
+                return If(cond, _body, else_body, Position(lnStart, lnStop, start, stop, path))
             end
+            if token.type ~= "eol" then return nil, expected("eol", token) end
+            advance_line()
+            else_body, err = body({"end"}) if err then return nil, err end
+            stop = pos.stop lnStop = pos.lnStop
+            if token.type ~= "end" then return nil, expected("end", token) end
+            advance()
+            if token.type ~= "eol" then return nil, expected("eol", token) end
+            advance_line()
+            return If(cond, _body, else_body, Position(lnStart, lnStop, start, stop, path))
         end
-        return If(cond, _body, else_body, Position(lnStart, lnStop, start, stop, path))
+        if token.type ~= "end" then return nil, expected("end", token) end
+        advance()
+        if token.type ~= "eol" then return nil, expected("eol", token) end
+        advance_line()
+        return If(cond, _body, nil, Position(lnStart, lnStop, start, stop, path))
     end
     expr = function()
         local node, err = atom() if err then return nil, err end
