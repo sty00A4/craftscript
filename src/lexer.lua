@@ -1,7 +1,12 @@
 require "src.global"
 require "src.position"
 
-local keywords = { "var", "static", "set", "global", "export", "return", "break" }
+local keywords = {
+    "local", "export",
+    "if", "while", "repeat", "for", "return", "break",
+    "and", "or", "not"
+}
+local symbols = { "=", "!", "+", "-", "*", "/", "?", "==", "!=", ">", "<", "(", ")", "[", "]", "{", "}" }
 
 local function Token(typ, value, pos)
     expect("typ", typ, "string")
@@ -16,6 +21,8 @@ end
 ---@param path string
 ---@param text string
 local function lex(path, text)
+    expect("path", path, "string")
+    expect("text", text, "string")
     local col, char = 0, ""
     local lines = text:split("\n")
     local function update(line) char = line:sub(col,col) end
@@ -24,6 +31,20 @@ local function lex(path, text)
         if char == "" then return end
         while table.contains({" ","\t","\r"}, char) and char ~= "" do advance(line) end
         if char == "#" then return end
+        if table.containsStart(symbols, char) then
+            local start, stop = col, col
+            local symbol = char
+            advance(line)
+            while table.containsStart(symbols, symbol .. char) do
+                symbol = symbol .. char
+                stop = col
+                advance(line)
+            end
+            if table.contains(symbols, symbol) then
+                return Token(symbol, nil, Position(ln, start, stop, path))
+            end
+            return nil, "ERROR: illegal symbol '"..symbol.."'"
+        end
         -- words
         if table.contains(string.letters, char) then
             local start, stop = col, col
@@ -88,17 +109,11 @@ local function lex(path, text)
             while char ~= endChar do
                 if char == "\\" then
                     advance(line)
-                    if char == "n" then
-                        str = str .. "\n"
-                    elseif char == "t" then
-                        str = str .. "\t"
-                    elseif char == "f" then
-                        str = str .. "\f"
-                    elseif char == "r" then
-                        str = str .. "\r"
-                    else
-                        str = str .. char
-                    end
+                    if char == "n" then str = str .. "\n"
+                    elseif char == "t" then str = str .. "\t"
+                    elseif char == "f" then str = str .. "\f"
+                    elseif char == "r" then str = str .. "\r"
+                    else str = str .. char end
                     stop = col
                     advance(line)
                 else
