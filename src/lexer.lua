@@ -3,20 +3,26 @@ require "src.position"
 
 local keywords = {
     "local", "export",
-    "if", "while", "repeat", "for", "return", "break",
+    "if", "else", "while", "repeat", "for", "return", "break",
+    "then", "do", "end",
     "and", "or", "not"
 }
-local symbols = { "=", "!", "+", "-", "*", "/", "?", "==", "!=", ">", "<", "(", ")", "[", "]", "{", "}" }
+local symbols = { "=", "!", "@", ",", "+", "-", "*", "/", "^", "?", "==", "!=", "<", ">", "(", ")", "[", "]", "{", "}" }
 
 local function Token(typ, value, pos)
     expect("typ", typ, "string")
     expect("pos", pos, "position")
-    return setmetatable({ type = typ, value = value, pos = pos }, {
+    return setmetatable({ type = typ, value = value, pos = pos, copy = table.copy }, {
         __name = "token", __tostring = function(self)
             return "["..self.type..(type(value) ~= "nil" and ":"..repr(value) or "").."]"
         end
     })
 end
+
+local tokenNames = {
+    eof = "end of file",
+    eol = "end of line"
+}
 
 ---@param path string
 ---@param text string
@@ -35,7 +41,7 @@ local function lex(path, text)
             local start, stop = col, col
             local symbol = char
             advance(line)
-            while table.containsStart(symbols, symbol .. char) do
+            while table.containsStart(symbols, symbol .. char) and char ~= "" do
                 symbol = symbol .. char
                 stop = col
                 advance(line)
@@ -136,8 +142,10 @@ local function lex(path, text)
             local token, err = next(ln, line) if err then return nil, err end
             if token then table.insert(tokens[ln], token) end
         end
+        table.insert(tokens[ln], Token("eol", nil, Position(ln, col, col, path)))
     end
+    table.insert(tokens, {}) table.insert(tokens[#tokens], Token("eof", nil, Position(#lines+1, 1, 1, path)))
     return tokens
 end
 
-return { lex=lex, keywords=keywords }
+return { lex=lex, keywords=keywords, symbols=symbols, tokenNames=tokenNames }

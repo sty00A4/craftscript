@@ -1,2 +1,2 @@
-local name = "joe"
-name = "biden"
+turtle up!
+turtle down!

@@ -8,5 +8,5 @@ function Position(ln, start, stop, path)
     expect("start", start, "number")
     expect("stop", stop, "number")
     expect("path", path, "string")
-    return setmetatable({ ln = ln, start = start, stop = stop, path = path }, { __name = "position" })
+    return setmetatable({ ln = ln, start = start, stop = stop, path = path, copy = table.copy }, { __name = "position" })
 end
