@@ -96,6 +96,57 @@ local function Repeat(expr, body, pos)
         end
     })
 end
+---`node.for`
+---@param var table
+---@param startNode table
+---@param stopNode table
+---@param stepNode table|nil
+---@param body table
+---@param pos table
+---@return table
+local function For(var, startNode, stopNode, stepNode, body, pos)
+    expect("var", var, "node.id")
+    expect("startNode", startNode, "node")
+    expect("stopNode", stopNode, "node")
+    expect("stepNode", stepNode, "node", "nil")
+    expect("body", body, "node")
+    expect("pos", pos, "position")
+    return setmetatable({
+        var = var, startNode = startNode, stopNode = stopNode, stepNode = stepNode,
+        body = body, pos = pos, copy = table.copy
+    }, {
+        __name = "node.for", __tostring = function(self)
+            local str = ("for %s = %s, %s"):format(self.var, self.startNode, self.stopNode)
+            if self.stepNode then str = str .. ", " .. tostring(self.stepNode) end
+            str = str .. " do"
+            if metatype(self.body) ~= "node.body" then str = str .. " " end
+            str = str .. tostring(self.body)
+            if metatype(self.body) ~= "node.body" then str = str .. " " end
+            return str .. "end"
+        end
+    })
+end
+---`node.forIn`
+---@param vars table
+---@param iter table
+---@param body table
+---@param pos table
+---@return table
+local function ForIn(vars, iter, body, pos)
+    expect("vars", vars, "node.id", "node.args")
+    expect("iter", iter, "node")
+    expect("body", body, "node")
+    expect("pos", pos, "position")
+    return setmetatable({ vars = vars, iter = iter, body = body, pos = pos, copy = table.copy }, {
+        __name = "node.forIn", __tostring = function(self)
+            local str = ("for %s in %s do"):format(self.vars, self.iter)
+            if metatype(self.body) ~= "node.body" then str = str .. " " end
+            str = str .. tostring(self.body)
+            if metatype(self.body) ~= "node.body" then str = str .. " " end
+            return str .. "end"
+        end
+    })
+end
 ---`node.assign`
 ---@param name table
 ---@param expr table
@@ -257,14 +308,23 @@ end
 
 local nodeNames = {
     ["node.chunk"] = "chunk",
+    ["node.body"] = "body",
+    ["node.if"] = "if statement",
+    ["node.while"] = "while statement",
+    ["node.repeat"] = "repeat statement",
+    ["node.for"] = "for statement",
+    ["node.forIn"] = "for-in statement",
     ["node.assign"] = "assignment",
     ["node.call"] = "call",
+    ["node.args"] = "arguments",
     ["node.field"] = "field path",
+    ["node.nil"] = "nil",
     ["node.int"] = "integer",
     ["node.float"] = "floating point number",
     ["node.bool"] = "boolean",
     ["node.str"] = "string",
     ["node.id"] = "identifier",
+    ["node.expr"] = "expression",
 }
 
 ---@param token table
@@ -281,6 +341,15 @@ local function expected(typ, token)
     expect("token", token, "token")
     return "ERROR: expected "..(lexer.tokenNames[typ] or ("'"..typ.."'"))
     ..", but got "..(lexer.tokenNames[token.type] or ("'"..token.type.."'"))
+end
+---@param typ string
+---@param node table
+---@return string
+local function expectedNode(typ, node)
+    expect("typ", typ, "string")
+    expect("node", node, "node")
+    return "ERROR: expected "..(lexer.tokenNames[typ] or ("'"..typ.."'"))
+    ..", but got "..(lexer.tokenNames[metatype(node)] or ("'"..metatype(node).."'"))
 end
 ---@param node table
 ---@return string
@@ -317,7 +386,6 @@ local function parse(path, tokens)
         local nodes = {}
         while not table.contains(endTokens, token.type) do
             local node, err = stat() if err then return nil, err end
-            print(token)
             if node then stop = node.pos.stop lnStop = node.pos.lnStop table.insert(nodes, node) end
             advance_line()
         end
@@ -457,6 +525,50 @@ local function parse(path, tokens)
         end
         return Repeat(_expr, _body, Position(lnStart, lnStop, start, stop, path))
     end
+    _for = function()
+        local lnStart, lnStop = pos.lnStart, pos.lnStop
+        local start, stop = pos.start, pos.stop
+        if token.type ~= "for" then return nil, expected("for", token) end
+        advance()
+        local vars, err = args() if err then return nil, err end
+        local _body
+        if token.type == "=" then
+            advance()
+            if metatype(vars) ~= "node.id" then return nil, expectedNode("node.id", vars) end
+            local startNode startNode, err = expr() if err then return nil, err end
+            if token.type ~= "," then return nil, expected(",", token) end
+            advance()
+            local stopNode stopNode, err = expr() if err then return nil, err end
+            local stepNode
+            if token.type == "," then advance() stepNode, err = expr() if err then return nil, err end end
+            if token.type ~= "eol" then
+                _body, err = stat() if err then return nil, err end
+            else
+                advance_line()
+                _body, err = body({"end"}) if err then return nil, err end
+                lnStop = pos.lnStop
+                if token.type ~= "end" then return nil, expected("end", token) end
+                advance()
+                if token.type ~= "eol" then return nil, expected("eol", token) end
+            end
+            return For(vars, startNode, stopNode, stepNode, _body, Position(lnStart, lnStop, start, stop, path))
+        elseif token.type == "in" then
+            advance()
+            local iter iter, err = expr() if err then return nil, err end
+            if token.type ~= "eol" then
+                _body, err = stat() if err then return nil, err end
+            else
+                advance_line()
+                _body, err = body({"end"}) if err then return nil, err end
+                lnStop = pos.lnStop
+                if token.type ~= "end" then return nil, expected("end", token) end
+                advance()
+                if token.type ~= "eol" then return nil, expected("eol", token) end
+            end
+            return ForIn(vars, iter, _body, Position(lnStart, lnStop, start, stop, path))
+        end
+        return nil, unexpeted(token)
+    end
     expr = function()
         local node, err = atom() if err then return nil, err end
         return node
@@ -472,6 +584,7 @@ local function parse(path, tokens)
             if node then stop = node.pos.stop end
             table.insert(nodes, node)
         end
+        if #nodes == 1 then return nodes[1] end
         return Args(nodes, Position(ln, ln, start, stop, path))
     end
     atom = function()

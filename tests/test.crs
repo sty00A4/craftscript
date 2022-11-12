@@ -1,2 +1,6 @@
-repeat 10 print! "yes"
-while true print! "you will never escape..."
+for i = 1, 10
+    print! i
+end
+for i in (pairs! numbers)
+    print! i
+end

@@ -4,7 +4,7 @@ require "src.position"
 local keywords = {
     "local", "export",
     "if", "else", "while", "repeat", "for", "return", "break",
-    "then", "do", "end",
+    "then", "do", "end", "in",
     "and", "or", "not"
 }
 local symbols = { "=", "!", "@", ",", ":", "+", "-", "*", "/", "^", "?", "==", "!=", "<", ">", "(", ")", "[", "]", "{", "}" }
