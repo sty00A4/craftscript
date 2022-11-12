@@ -305,6 +305,30 @@ local function Expr(node, pos)
         end
     })
 end
+---`node.break`
+---@param pos table
+---@return table
+local function Break(pos)
+    expect("pos", pos, "position")
+    return setmetatable({ pos = pos, copy = table.copy }, {
+        __name = "node.break", __tostring = function(self)
+            return "break"
+        end
+    })
+end
+---`node.return`
+---@param node table|nil
+---@param pos table
+---@return table
+local function Return(node, pos)
+    expect("node", node, "node", "nil")
+    expect("pos", pos, "position")
+    return setmetatable({ node = node, pos = pos, copy = table.copy }, {
+        __name = "node.return", __tostring = function(self)
+            return "return" .. (self.node and " "..tostring(self.node) or "")
+        end
+    })
+end
 
 local nodeNames = {
     ["node.chunk"] = "chunk",
@@ -325,6 +349,8 @@ local nodeNames = {
     ["node.str"] = "string",
     ["node.id"] = "identifier",
     ["node.expr"] = "expression",
+    ["node.break"] = "break",
+    ["node.return"] = "return",
 }
 
 ---@param token table
@@ -376,7 +402,7 @@ local function parse(path, tokens)
         while token.type ~= "eof" do
             local node, err = stat() if err then return nil, err end
             if node then stop = node.pos.stop lnStop = node.pos.lnStop table.insert(nodes, node) end
-            if token.type ~= "eof" then advance_line() end
+            advance_line()
         end
         return Chunk(nodes, Position(lnStart, lnStop, start, stop, path))
     end
@@ -410,6 +436,19 @@ local function parse(path, tokens)
         if token.type == "while" then return _while() end
         if token.type == "repeat" then return _repeat() end
         if token.type == "for" then return _for() end
+        if token.type == "break" then
+            return Break(Position(token.pos.lnStart, token.pos.lnStop, token.pos.start, token.pos.stop, path))
+        end
+        if token.type == "return" then
+            advance()
+            if token.type == "eol" then
+                stop = token.pos.stop
+                return Return(nil, Position(ln, ln, start, stop, path))
+            end
+            local _node, err = expr() if err then return nil, err end
+            stop = _node.pos.stop
+            return Return(_node, Position(ln, ln, start, stop, path))
+        end
         -- todo control flow
         while token.type ~= endToken do
             local fieldPath = {}

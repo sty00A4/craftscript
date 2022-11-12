@@ -24,5 +24,8 @@ if tokens then
         if not file then print("ERROR: couldn't open target file '"..target_path.."'") return end
         file:write(tostring(ast)) file:close()
     end
-    if run then dofile(target_path) end
+    if run then
+        local res = { pcall(dofile, target_path) } if not res[1] then print(res[2]) end
+        return table.sub(res, 2)
+    end
 end

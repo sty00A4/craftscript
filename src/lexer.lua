@@ -34,8 +34,8 @@ local function lex(path, text)
     local function update(line) char = line:sub(col,col) end
     local function advance(line) col = col + 1 update(line) end
     local function next(ln, line)
-        if char == "" then return end
         while table.contains({" ","\t","\r"}, char) and char ~= "" do advance(line) end
+        if char == "" then return end
         if char == "#" then while char ~= "" do advance(line) end return end
         if table.containsStart(symbols, char) then
             local start, stop = col, col
