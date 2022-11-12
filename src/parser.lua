@@ -330,17 +330,18 @@ local function parse(path, tokens)
             advance()
             if token.type == "if" then
                 else_body, err = _if() if err then return nil, err end
+                stop = else_body.pos.stop lnStop = else_body.pos.lnStop
             else
                 if token.type ~= "eol" then return nil, expected("eol", token) end
                 advance_line()
                 else_body, err = body({"end"}) if err then return nil, err end
+                stop = pos.stop lnStop = pos.lnStop
+                if token.type ~= "end" then return nil, expected("end", token) end
+                advance()
+                if token.type ~= "eol" then return nil, expected("eol", token) end
+                advance_line()
             end
         end
-        if token.type ~= "end" then return nil, expected("end", token) end
-        stop = pos.stop lnStop = pos.lnStop
-        advance()
-        if token.type ~= "eol" then return nil, expected("eol", token) end
-        advance_line()
         return If(cond, _body, else_body, Position(lnStart, lnStop, start, stop, path))
     end
     expr = function()
