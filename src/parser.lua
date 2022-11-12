@@ -452,7 +452,6 @@ local function parse(path, tokens)
             stop = _node.pos.stop
             return Return(_node, Position(ln, ln, start, stop, path))
         end
-        -- todo control flow
         while token.type ~= endToken do
             local fieldPath = {}
             while token.type ~= endToken and token.type ~= "=" and token.type ~= "!" do
