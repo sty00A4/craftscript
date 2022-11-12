@@ -1,1 +1,5 @@
-print! (tostring! 1)
+if true
+    print! "yes"
+else
+    print! "no"
+end

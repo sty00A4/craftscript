@@ -47,7 +47,7 @@ local function lex(path, text)
                 advance(line)
             end
             if table.contains(symbols, symbol) then
-                return Token(symbol, nil, Position(ln, start, stop, path))
+                return Token(symbol, nil, Position(ln, ln, start, stop, path))
             end
             return nil, "ERROR: illegal symbol '"..symbol.."'"
         end
@@ -62,15 +62,15 @@ local function lex(path, text)
                 advance(line)
             end
             if table.contains(keywords, word) then
-                return Token(word, nil, Position(ln, start, stop, path))
+                return Token(word, nil, Position(ln, ln, start, stop, path))
             end
             if word == "true" or word == "false" then
-                return Token("bool", word == "true", Position(ln, start, stop, path))
+                return Token("bool", word == "true", Position(ln, ln, start, stop, path))
             end
             if word == "nil" then
-                return Token("nil", nil, Position(ln, start, stop, path))
+                return Token("nil", nil, Position(ln, ln, start, stop, path))
             end
-            return Token("id", word, Position(ln, start, stop, path))
+            return Token("id", word, Position(ln, ln, start, stop, path))
         end
         -- numbers
         if table.contains(string.digits, char) then
@@ -91,9 +91,9 @@ local function lex(path, text)
                     stop = col
                     advance(line)
                 end
-                return Token("float", tonumber(number), Position(ln, start, stop, path))
+                return Token("float", tonumber(number), Position(ln, ln, start, stop, path))
             end
-            return Token("int", tonumber(number), Position(ln, start, stop, path))
+            return Token("int", tonumber(number), Position(ln, ln, start, stop, path))
         end
         if char == "." then
             local start, stop = col, col
@@ -104,7 +104,7 @@ local function lex(path, text)
                 stop = col
                 advance(line)
             end
-            return Token("float", tonumber(number), Position(ln, start, stop, path))
+            return Token("float", tonumber(number), Position(ln, ln, start, stop, path))
         end
         -- string
         if char == "\"" or char == "'" then
@@ -129,7 +129,7 @@ local function lex(path, text)
                 end
             end
             advance(line)
-            return Token("str", str, Position(ln, start, stop, path))
+            return Token("str", str, Position(ln, ln, start, stop, path))
         end
         return nil, "ERROR: illegal character '"..char.."'"
     end
@@ -142,9 +142,9 @@ local function lex(path, text)
             local token, err = next(ln, line) if err then return nil, err end
             if token then table.insert(tokens[ln], token) end
         end
-        table.insert(tokens[ln], Token("eol", nil, Position(ln, col, col, path)))
+        table.insert(tokens[ln], Token("eol", nil, Position(ln, ln, col, col, path)))
     end
-    table.insert(tokens, {}) table.insert(tokens[#tokens], Token("eof", nil, Position(#lines+1, 1, 1, path)))
+    table.insert(tokens, {}) table.insert(tokens[#tokens], Token("eof", nil, Position(#lines+1, #lines+1, 1, 1, path)))
     return tokens
 end
 

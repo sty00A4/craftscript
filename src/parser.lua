@@ -13,6 +13,38 @@ local function Chunk(nodes, pos)
         end
     })
 end
+---`node.body`
+---@param nodes table
+---@param pos table
+---@return table
+local function Body(nodes, pos)
+    expect("nodes", nodes, "table")
+    expect("pos", pos, "position")
+    return setmetatable({ nodes = nodes, pos = pos, copy = table.copy }, {
+        __name = "node.body", __tostring = function(self)
+            return "\n"..table.join(self.nodes, "\n").."\n"
+        end
+    })
+end
+---`node.if`
+---@param cond table
+---@param body table
+---@param else_body table|nil
+---@param pos table
+---@return table
+local function If(cond, body, else_body, pos)
+    expect("cond", cond, "node")
+    expect("body", body, "node")
+    expect("else_body", else_body, "node", "nil")
+    expect("pos", pos, "position")
+    return setmetatable({ cond = cond, body = body, else_body = else_body, pos = pos, copy = table.copy }, {
+        __name = "node.if", __tostring = function(self)
+            local str = ("if %s then%s"):format(self.cond, self.body)
+            if self.else_body then str = str .. ("else%s"):format(self.else_body) end
+            return str .. "end"
+        end
+    })
+end
 ---`node.assign`
 ---@param name table
 ---@param expr table
@@ -189,6 +221,13 @@ local nodeNames = {
 local function unexpeted(token)
     return "ERROR: unexpected "..(lexer.tokenNames[token.type] or ("'"..token.type.."'")) -- get the token name
 end
+---@param typ string
+---@param token table
+---@return string
+local function expected(typ, token)
+    return "ERROR: expected "..(lexer.tokenNames[typ] or ("'"..typ.."'"))
+    ..", but got "..(lexer.tokenNames[token.type] or ("'"..token.type.."'"))
+end
 ---@param node table
 ---@return string
 local function unexpetedNode(node)
@@ -198,20 +237,35 @@ end
 ---@param tokens table
 local function parse(path, tokens)
     local ln, idx, token, pos = 0, 0, nil, nil
-    local function update() token = tokens[ln][idx] pos = token.pos end
+    local function update()
+        token = tokens[ln][idx]
+        pos = token.pos
+    end
     local function advance() idx = idx + 1 update() end
     local function advance_line() ln = ln + 1 idx = 1 update() end
     advance_line()
-    local chunk, stat, args, expr, atom
+    local chunk, body, stat, _if, _while, _repeat, _for, args, expr, atom
     chunk = function()
+        local lnStart, lnStop = pos.lnStart, pos.lnStop
         local start, stop = pos.start, pos.stop
         local nodes = {}
         while token.type ~= "eof" do
             local node, err = stat() if err then return nil, err end
-            if node then stop = node.pos.stop table.insert(nodes, node) end
+            if node then stop = node.pos.stop lnStop = node.pos.lnStop table.insert(nodes, node) end
+            if token.type ~= "eof" then advance_line() end
+        end
+        return Chunk(nodes, Position(lnStart, lnStop, start, stop, path))
+    end
+    body = function(endTokens)
+        local lnStart, lnStop = pos.lnStart, pos.lnStop
+        local start, stop = pos.start, pos.stop
+        local nodes = {}
+        while not table.contains(endTokens, token.type) do
+            local node, err = stat() if err then return nil, err end
+            if node then stop = node.pos.stop lnStop = node.pos.lnStop table.insert(nodes, node) end
             advance_line()
         end
-        return Chunk(nodes, Position(ln, start, stop, path))
+        return Body(nodes, Position(lnStart, lnStop, start, stop, path))
     end
     ---@param scoping string|nil
     ---@param endToken string|nil
@@ -228,6 +282,10 @@ local function parse(path, tokens)
             node.start = start -- reset position
             return node
         end
+        if token.type == "if" then return _if() end
+        if token.type == "while" then return _while() end
+        if token.type == "repeat" then return _repeat() end
+        if token.type == "for" then return _for() end
         -- todo control flow
         while token.type ~= endToken do
             local fieldPath = {}
@@ -240,23 +298,50 @@ local function parse(path, tokens)
                 stop = pos.stop
                 advance()
                 local _expr, err = expr() if err then return nil, err end
-                node = Assign(node or Field(fieldPath, Position(ln, start, stop, path)), _expr or {}, scoping, Position(ln, start, stop, path))
+                node = Assign(node or Field(fieldPath, Position(ln, ln, start, stop, path)), _expr or {}, scoping, Position(ln, ln, start, stop, path))
             elseif token.type == "!" then -- call
                 stop = pos.stop
                 advance()
                 if token.type ~= endToken then
                     local _args, err = args() if err then return nil, err end
                     stop = _args.pos.stop
-                    node = Call(node or Field(fieldPath, Position(ln, start, stop, path)), _args, Position(ln, start, stop, path))
+                    node = Call(node or Field(fieldPath, Position(ln, ln, start, stop, path)), _args, Position(ln, ln, start, stop, path))
                 else
-                    node = Call(node or Field(fieldPath, Position(ln, start, stop, path)), nil, Position(ln, start, stop, path))
+                    node = Call(node or Field(fieldPath, Position(ln, ln, start, stop, path)), nil, Position(ln, ln, start, stop, path))
                 end
                 if scoping ~= "" then return nil, unexpetedNode(node) end
             else
-                node = Field(fieldPath, Position(ln, start, stop, path))
+                node = Field(fieldPath, Position(ln, ln, start, stop, path))
             end
         end
         return node
+    end
+    _if = function()
+        local lnStart, lnStop = pos.lnStart, pos.lnStop
+        local start, stop = pos.start, pos.stop
+        if token.type ~= "if" then return nil, expected("if", token) end
+        advance()
+        local cond, err = expr() if err then return nil, err end
+        if token.type ~= "eol" then return nil, expected("eol", token) end
+        advance_line()
+        local _body _body, err = body({"else", "end"}) if err then return nil, err end
+        local else_body
+        if token.type == "else" then
+            advance()
+            if token.type == "if" then
+                else_body, err = _if() if err then return nil, err end
+            else
+                if token.type ~= "eol" then return nil, expected("eol", token) end
+                advance_line()
+                else_body, err = body({"end"}) if err then return nil, err end
+            end
+        end
+        if token.type ~= "end" then return nil, expected("end", token) end
+        stop = pos.stop lnStop = pos.lnStop
+        advance()
+        if token.type ~= "eol" then return nil, expected("eol", token) end
+        advance_line()
+        return If(cond, _body, else_body, Position(lnStart, lnStop, start, stop, path))
     end
     expr = function()
         local node, err = atom() if err then return nil, err end
@@ -273,7 +358,7 @@ local function parse(path, tokens)
             if node then stop = node.pos.stop end
             table.insert(nodes, node)
         end
-        return Args(nodes, Position(ln, start, stop, path))
+        return Args(nodes, Position(ln, ln, start, stop, path))
     end
     atom = function()
         local _token = token:copy()
@@ -290,7 +375,7 @@ local function parse(path, tokens)
             if metatype(node) == "node.assign" then return nil, unexpetedNode(node) end
             local stop = pos.stop
             advance()
-            return Expr(node, Position(ln, start, stop, path))
+            return Expr(node, Position(ln, ln, start, stop, path))
         end
         return nil, unexpeted(token)
     end
