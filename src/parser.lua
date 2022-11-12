@@ -398,7 +398,7 @@ local function parse(path, tokens)
         if not scoping then scoping = "" end expect("scoping", scoping, "string") -- check scoping
         local start, stop = pos.start, pos.stop
         local node = nil
-        if token.type == "local" or token.type == "export" then -- local/export prefix
+        if token.type == "local" then -- local prefix
             if scoping ~= "" then return nil, unexpeted(token) end -- prefix already exists
             scoping = token.type
             advance()
@@ -456,6 +456,7 @@ local function parse(path, tokens)
         local _body
         if token.type ~= "eol" then
             _body, err = stat() if err then return nil, err end
+            advance_line()
         else
             advance_line()
             _body, err = body({"else", "end"}) if err then return nil, err end

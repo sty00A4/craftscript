@@ -2,7 +2,7 @@ require "src.global"
 require "src.position"
 
 local keywords = {
-    "local", "export",
+    "local",
     "if", "else", "while", "repeat", "for", "return", "break",
     "then", "do", "end", "in",
     "and", "or", "not"
@@ -36,7 +36,7 @@ local function lex(path, text)
     local function next(ln, line)
         if char == "" then return end
         while table.contains({" ","\t","\r"}, char) and char ~= "" do advance(line) end
-        if char == "#" then return end
+        if char == "#" then while char ~= "" do advance(line) end return end
         if table.containsStart(symbols, char) then
             local start, stop = col, col
             local symbol = char

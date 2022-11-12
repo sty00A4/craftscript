@@ -1,1 +1,6 @@
-print! (1)
+if willToLive print! "yes"
+else print! "NOOOO"
+repeat 10 print! "did you know I have dementia?"
+print! "watch me count :)"
+for i = 1, 10 print! i
+print! "HAHAHAHAH"
