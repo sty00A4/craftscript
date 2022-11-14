@@ -1,1 +1,10 @@
-print! not false and true
+local n = 0
+if n == 0
+    print! "zero"
+else if n == 1
+    print! "one"
+else if n == 2
+    print! "two"
+else
+    print! "idk"
+end
