@@ -6,7 +6,7 @@ local precedence = {
     { "==", "~=", "<", ">", "<=", ">=" },
     { ".." },
     { "+", "-" },
-    { "*", "/" },
+    { "*", "/", "%" },
     { "-", "not" },
     { "^" },
     { "#" },
@@ -637,7 +637,7 @@ local function parse(path, tokens)
         local _body
         if token.type ~= "eol" then
             _body, err = stat() if err then return nil, err end
-            advance_line()
+            return If(cond, _body, nil, Position(lnStart, lnStop, start, stop, path))
         else
             advance_line()
             _body, err = body({"else", "end"}) if err then return nil, err end
@@ -797,7 +797,7 @@ local function parse(path, tokens)
         return binary({"+", "-"}, term)
     end
     term = function()
-        return binary({"*", "/"}, factor)
+        return binary({"*", "/", "%"}, factor)
     end
     factor = function()
         if token.type == "-" or token.type == "not" then

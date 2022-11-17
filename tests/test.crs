@@ -1,3 +1,6 @@
-global name = "sty"
-age = 18
-print! name, age
+proc prime: x
+    if x <= 1 return false
+    for n = 2, x - 1  if x % n == 0  return false
+    return true
+end
+for x = 0, 1000  if (prime! x)  io write! x .. "\t"
