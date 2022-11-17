@@ -556,9 +556,9 @@ local function parse(path, tokens)
         return Body(nodes, Position(lnStart, lnStop, start, stop, path))
     end
     ---@param global boolean|nil
-    ---@param endToken string|nil
+    ---@param endToken table|nil
     stat = function(global, endToken)
-        if not endToken then endToken = "eol" end expect("endToken", endToken, "string")
+        if not endToken then endToken = {"eol"} end expect("endToken", endToken, "string")
         expect("global", global, "boolean", "nil")
         local start, stop = pos.start, pos.stop
         local node = nil
@@ -592,9 +592,9 @@ local function parse(path, tokens)
             if token.type ~= "eol" then return nil, unexpeted(token) end
             node = Return(_node, Position(ln, ln, start, stop, path))
         end
-        while token.type ~= endToken do
+        while not table.contains(endToken, token.type) do
             local fieldPath = {}
-            while token.type ~= endToken and token.type ~= "=" and token.type ~= "!" do
+            while not table.contains(endToken, token.type) and token.type ~= "=" and token.type ~= "!" do
                 local _node, err = expr() if err then return nil, err end
                 table.insert(fieldPath, _node)
                 stop = pos.stop
@@ -616,7 +616,7 @@ local function parse(path, tokens)
                 stop = pos.stop
                 if not node then return nil, unexpeted(token) end
                 advance()
-                if token.type ~= endToken then
+                if not table.contains(endToken, token.type) then
                     local _args, err = args() if err then return nil, err end
                     stop = _args.pos.stop
                     node = Call(node, _args, Position(ln, ln, start, stop, path))
@@ -845,7 +845,7 @@ local function parse(path, tokens)
         if token.type == "(" then
             local start = pos.start
             advance()
-            local node, err = stat("", ")") if err then return nil, err end
+            local node, err = stat(false, {")"}) if err then return nil, err end
             if metatype(node) == "node.assign" then return nil, unexpetedNode(node) end
             local stop = pos.stop
             advance()
