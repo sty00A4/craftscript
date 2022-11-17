@@ -206,7 +206,7 @@ end
 ---`node.assign`
 ---@param name table
 ---@param expr table
----@param global boolean
+---@param global boolean|nil
 ---@param pos table
 ---@return table
 local function Assign(name, expr, global, pos)
