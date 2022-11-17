@@ -181,6 +181,28 @@ local function ForIn(vars, iter, body, pos)
         end
     })
 end
+---`node.proc`
+---@param name table
+---@param args table|nil
+---@param body table
+---@param pos table
+---@return table
+local function Proc(name, args, body, pos)
+    expect("name", name, "node.field")
+    expect("args", args, "node.args", "node.id", "nil")
+    expect("body", body, "node")
+    expect("pos", pos, "position")
+    return setmetatable({ name = name, args = args, body = body, pos = pos, copy = table.copy }, {
+        __name = "node.proc", __tostring = function(self)
+            local str = ("function %s (%s)"):format(self.name, self.args or "")
+            if metatype(self.body) ~= "node.body" then str = str .. " " end
+            str = str .. tostring(self.body)
+            if metatype(self.body) ~= "node.body" then str = str .. " " end
+            str = str .. "end"
+            return str
+        end
+    })
+end
 ---`node.assign`
 ---@param name table
 ---@param expr table
@@ -507,7 +529,7 @@ local function parse(path, tokens)
         end
         return left
     end
-    local chunk, body, stat, _if, _while, _repeat, _for, args, expr, _or, _and, comp, concat, arith, term, factor, pow, len, atom
+    local chunk, body, stat, _if, _while, _repeat, _for, proc, args, expr, _or, _and, comp, concat, arith, term, factor, pow, len, atom
     -- todo procedure
     -- todo binary operation
     -- todo unary operation
@@ -552,6 +574,7 @@ local function parse(path, tokens)
         if token.type == "while" then return _while() end
         if token.type == "repeat" then return _repeat() end
         if token.type == "for" then return _for() end
+        if token.type == "proc" then return proc() end
         if token.type == "break" then
             node = Break(Position(token.pos.lnStart, token.pos.lnStop, token.pos.start, token.pos.stop, path))
             advance()
@@ -722,6 +745,37 @@ local function parse(path, tokens)
             return ForIn(vars, iter, _body, Position(lnStart, lnStop, start, stop, path))
         end
         return nil, unexpeted(token)
+    end
+    proc = function()
+        local lnStart, lnStop = pos.lnStart, pos.lnStop
+        local start, stop = pos.start, pos.stop
+        if token.type ~= "proc" then return nil, expected("proc", token) end
+        advance()
+        local fieldPath = {}
+        while token.type == "id" do
+            table.insert(fieldPath, ID(token.value, token.pos))
+            stop = pos.stop
+            advance()
+        end
+        local name = Field(fieldPath, Position(ln, ln, start, stop, path))
+        local _args, err
+        if token.type == ":" then
+            advance()
+            _args, err = args() if err then return nil, err end
+        end
+        local _body
+        if token.type ~= "eol" then
+            _body, err = stat() if err then return nil, err end
+            advance_line()
+        else
+            advance_line()
+            _body, err = body({"end"}) if err then return nil, err end
+            lnStop = pos.lnStop
+            if token.type ~= "end" then return nil, expected("end", token) end
+            advance()
+            if token.type ~= "eol" then return nil, expected("eol", token) end
+        end
+        return Proc(name, _args, _body, Position(lnStart, lnStop, start, stop, path))
     end
     expr = function()
         local node, err = _or() if err then return nil, err end
