@@ -558,7 +558,7 @@ local function parse(path, tokens)
     ---@param global boolean|nil
     ---@param endToken table|nil
     stat = function(global, endToken)
-        if not endToken then endToken = {"eol"} end expect("endToken", endToken, "string")
+        if not endToken then endToken = {"eol"} end expect("endToken", endToken, "table")
         expect("global", global, "boolean", "nil")
         local start, stop = pos.start, pos.stop
         local node = nil
