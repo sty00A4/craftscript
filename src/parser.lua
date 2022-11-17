@@ -206,17 +206,17 @@ end
 ---`node.assign`
 ---@param name table
 ---@param expr table
----@param scoping string|nil
+---@param global boolean
 ---@param pos table
 ---@return table
-local function Assign(name, expr, scoping, pos)
+local function Assign(name, expr, global, pos)
     expect("name", name, "node")
     expect("expr", expr, "node")
-    expect("scoping", scoping, "string", "nil")
+    expect("global", global, "boolean", "nil")
     expect("pos", pos, "position")
-    return setmetatable({ name = name, expr = expr, scoping = scoping, pos = pos, copy = table.copy }, {
+    return setmetatable({ name = name, expr = expr, global = global, pos = pos, copy = table.copy }, {
         __name = "node.assign", __tostring = function(self)
-            return ("%s%s = %s"):format(((self.scoping ~= "" and (self.scoping.." ")) or ""), self.name, self.expr)
+            return ("%s%s = %s"):format(self.global and "" or "local ", self.name, self.expr)
         end
     })
 end
@@ -555,18 +555,18 @@ local function parse(path, tokens)
         end
         return Body(nodes, Position(lnStart, lnStop, start, stop, path))
     end
-    ---@param scoping string|nil
+    ---@param global boolean|nil
     ---@param endToken string|nil
-    stat = function(scoping, endToken)
+    stat = function(global, endToken)
         if not endToken then endToken = "eol" end expect("endToken", endToken, "string")
-        if not scoping then scoping = "" end expect("scoping", scoping, "string") -- check scoping
+        expect("global", global, "boolean", "nil")
         local start, stop = pos.start, pos.stop
         local node = nil
-        if token.type == "local" then -- local prefix
-            if scoping ~= "" then return nil, unexpeted(token) end -- prefix already exists
-            scoping = token.type
+        if token.type == "global" then -- local prefix
+            if global then return nil, unexpeted(token) end -- prefix already exists
+            global = true
             advance()
-            node, err = stat(scoping) if err then return nil, err end
+            node, err = stat(global) if err then return nil, err end
             node.start = start -- reset position
             return node
         end
@@ -611,7 +611,7 @@ local function parse(path, tokens)
                 if not node then return nil, unexpeted(token) end
                 advance()
                 local _expr, err = expr() if err then return nil, err end
-                node = Assign(node, _expr or {}, scoping, Position(ln, ln, start, stop, path))
+                node = Assign(node, _expr or {}, global, Position(ln, ln, start, stop, path))
             elseif token.type == "!" then -- call
                 stop = pos.stop
                 if not node then return nil, unexpeted(token) end
@@ -623,7 +623,7 @@ local function parse(path, tokens)
                 else
                     node = Call(node, nil, Position(ln, ln, start, stop, path))
                 end
-                if scoping ~= "" then return nil, unexpetedNode(node) end
+                if global then return nil, unexpetedNode(node) end
             else break end
         end
         return node

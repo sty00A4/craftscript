@@ -1,5 +1,3 @@
-proc say: text
-    print! text
-end
-
-say! "hello"
+global name = "sty"
+age = 18
+print! name, age

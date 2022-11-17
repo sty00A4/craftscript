@@ -2,7 +2,7 @@ require "src.global"
 require "src.position"
 
 local keywords = {
-    "local",
+    "global",
     "if", "else", "while", "repeat", "for", "proc", "return", "break",
     "then", "do", "end", "in",
     "and", "or", "not"

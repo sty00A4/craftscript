@@ -1,4 +1,3 @@
-function say (text)
-print(text)
-end
-say("hello")
+name = "sty"
+local age = 18
+print(name, age)
