@@ -1,12 +1,8 @@
 local cs = require "src"
 local args = {...}
 local idx = 1
-local run = false
-while true do
-    if args[idx] == "-r" then run = true idx = idx + 1
-    else break end
-end
-local path = args[idx] idx = idx + 1
+local run = args[idx] == "run"  idx = idx + 1
+local path = args[idx]          idx = idx + 1
 local file = io.open(path, "r")
 if not file then print("ERROR: file '"..path.."' not found") return end
 local text = file:read("*a") file:close()
