@@ -1,8 +1,7 @@
 local cs = require "src"
 local args = {...}
-local idx = 1
-local run = args[idx] == "run"  idx = idx + 1
-local path = args[idx]          idx = idx + 1
+local run = args[1] == "run"
+local path = args[2]
 local file = io.open(path, "r")
 if not file then print("ERROR: file '"..path.."' not found") return end
 local text = file:read("*a") file:close()
@@ -12,7 +11,7 @@ if tokens then
     -- for ln, line in ipairs(tokens) do print(tostring(ln).." "..table.join(line, " ")) end
     local ast ast, err = cs.parser.parse(path, tokens) if err then print(err) return end
     -- if ast then print(ast) end
-    local target_path = args[idx] if args[idx] then idx = idx + 1 end
+    local target_path = args[3]
     if not target_path then
         local split = path:split(".")
         target_path = table.join(table.sub(split, 1, math.max(#split-1, 1)), ".")..".lua"
