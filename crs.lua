@@ -10,7 +10,7 @@ if args[1] == "update" then
     if not file then
         print "no version tracking"
         print("updating to "..version.."...")
-        shell.run "wget https://raw.githubusercontent.com/sty00A4/craftscript/main/installs/install_cc.lua install"
+        shell.run "pastebin get R5q42BEk install"
         shell.run "install yes"
         return
     end
@@ -21,7 +21,7 @@ if args[1] == "update" then
         return print "already on the newest version "..currentVersion
     else
         print("updating to "..version.."...")
-        shell.run "wget https://raw.githubusercontent.com/sty00A4/craftscript/main/installs/install_cc.lua install"
+        shell.run "pastebin get R5q42BEk install"
         shell.run "install yes"
         return
     end
