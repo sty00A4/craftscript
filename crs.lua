@@ -8,7 +8,7 @@ if args[1] == "update" then
     file.close()
     file = fs.open("crs/VERSION", "r")
     if not file then
-        print "not version tracking"
+        print "no version tracking"
         print("updating to "..version.."...")
         shell.run "wget https://raw.githubusercontent.com/sty00A4/craftscript/main/installs/install_cc.lua install"
         shell.run "install yes"
@@ -17,6 +17,7 @@ if args[1] == "update" then
     local currentVersion = file.readAll()
     file.close()
     if currentVersion == version then
+        print(currentVersion.." "..version)
         return print "already on the newest version "..currentVersion
     else
         print("updating to "..version.."...")
