@@ -1,8 +1,10 @@
 local args = {...}
-if fs.exists("crs") and not args[1] then
-    print("the directory 'crs' already exists, should it be deleted? (y/n) ")
-    local answer = read()
-    if answer ~= "y" and answer ~= "Y" then return end
+if fs.exists("crs") then
+    if not args[1] then
+        print("the directory 'crs' already exists, should it be deleted? (y/n) ")
+        local answer = read()
+        if answer ~= "y" and answer ~= "Y" then return end
+    end
     fs.delete("crs")
 end
 fs.makeDir("crs")
@@ -18,12 +20,14 @@ shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/src/p
 shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/src/position.lua crs/src/position.lua")
 shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/installs/install_cc.lua crs/installs/install_cc.lua")
 fs.move("crs/startup.lua", "startup.lua")
-if fs.exists("startup.lua") and not args[1] then
-    print("the file 'startup.lua' already exists, should it be deleted? (y/n) ")
-    local answer = read()
-    if answer ~= "y" and answer ~= "Y" then
-        print "crs has to be accessed through 'crs/crs.lua' now :("
-        return
+if fs.exists("startup.lua") then
+    if not args[1] then
+        print("the file 'startup.lua' already exists, should it be deleted? (y/n) ")
+        local answer = read()
+        if answer ~= "y" and answer ~= "Y" then
+            print "crs has to be accessed through 'crs/crs.lua' now :("
+            return
+        end
     end
     fs.delete("startup.lua")
 end
