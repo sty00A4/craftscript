@@ -8,6 +8,7 @@ end
 fs.makeDir("crs")
 shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/crs.lua crs/crs.lua")
 shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/LICENSE crs/LICENSE")
+shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/VERSION crs/VERSION")
 fs.makeDir("crs/src")
 shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/src/global.lua crs/src/global.lua")
 shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/src/init.lua crs/src/init.lua")
