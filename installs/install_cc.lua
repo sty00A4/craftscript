@@ -19,7 +19,7 @@ shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/insta
 local completion = require "cc.shell.completion"
 shell.setPath(shell.path()..":/crs")
 local crsComplete = completion.build(
-    { completion.choice, { "run", "comp" } },
+    { completion.choice, { "run", "comp", "update" } },
     completion.file,
     completion.file
 )
