@@ -1,5 +1,22 @@
 local cs = require "src"
 local args = {...}
+if args[1] == "update" then
+    if not http or not fs or not shell then return print "update only supported in CraftOS" end
+    local file = http.get("https://raw.githubusercontent.com/sty00A4/craftscript/main/VERSION", nil, true)
+    if not file then return print "failed to update (no response from server)" end
+    local version = file.readAll()
+    file.close()
+    file = fs.open("crs/VERSION", "r")
+    local currentVersion = file.readAll()
+    file.close()
+    if currentVersion == version then
+        return print "already on the newest version "..currentVersion
+    else
+        print("updating to "..version.."...")
+        shell.run "crs/installs/install_cc.lua yes"
+        return
+    end
+end
 local run = args[1] == "run"
 local path = args[2]
 local file = io.open(path, "r")
