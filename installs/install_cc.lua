@@ -2,7 +2,7 @@ local args = {...}
 if fs.exists("crs") and not args[1] then
     print("the directory 'crs' already exists, should it be deleted? (y/n) ")
     local answer = read()
-    if answer ~= "y" or answer ~= "Y" then return end
+    if answer ~= "y" and answer ~= "Y" then return end
     fs.delete("crs")
 end
 fs.makeDir("crs")
