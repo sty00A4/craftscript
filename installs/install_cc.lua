@@ -24,3 +24,4 @@ local crsComplete = completion.build(
     completion.file
 )
 shell.setCompletionFunction("crs/crs.lua", crsComplete)
+fs.delete(shell.getRunningProgram())
