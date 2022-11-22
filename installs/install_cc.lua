@@ -29,6 +29,6 @@ if fs.exists("startup.lua") then
         end
     end
     fs.delete("startup.lua")
-    fs.move("crs/startup.lua", "startup.lua")
 end
+fs.move("crs/startup.lua", "startup.lua")
 fs.delete(shell.getRunningProgram())
