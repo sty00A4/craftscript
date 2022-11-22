@@ -46,6 +46,10 @@ if tokens then
         file:write(tostring(ast)) file:close()
     end
     if run then
+        if shell then
+            local res = { pcall(shell.run, target_path) } if not res[1] then print(res[2]) end
+            return table.sub(res, 2)
+        end
         local res = { pcall(dofile, target_path) } if not res[1] then print(res[2]) end
         return table.sub(res, 2)
     end
