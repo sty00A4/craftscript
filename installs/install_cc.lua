@@ -16,12 +16,5 @@ shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/src/l
 shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/src/parser.lua crs/src/parser.lua")
 shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/src/position.lua crs/src/position.lua")
 shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/installs/install_cc.lua crs/installs/install_cc.lua")
-local completion = require "cc.shell.completion"
-shell.setPath(shell.path()..":/crs")
-local crsComplete = completion.build(
-    { completion.choice, { "run", "comp", "update" } },
-    completion.file,
-    completion.file
-)
-shell.setCompletionFunction("crs/crs.lua", crsComplete)
+fs.move("crs/startup.lua", "startup.lua")
 fs.delete(shell.getRunningProgram())
