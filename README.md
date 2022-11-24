@@ -1,2 +1,2 @@
-# craftscript
-computer craft scripting language
+# CraftScript
+A computercraft scripting language
