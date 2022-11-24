@@ -37,6 +37,7 @@ if tokens then
     -- for ln, line in ipairs(tokens) do print(tostring(ln).." "..table.join(line, " ")) end
     local ast ast, err = cs.parser.parse(path, tokens) if err then print(err) return end
     -- if ast then print(ast) end
+    _, err = cs.type.get(ast, {}) if err then print(err) return end
     local target_path = args[3]
     if not target_path then
         local split = path:split(".")
