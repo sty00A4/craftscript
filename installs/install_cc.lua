@@ -18,6 +18,7 @@ shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/src/i
 shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/src/lexer.lua crs/src/lexer.lua")
 shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/src/parser.lua crs/src/parser.lua")
 shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/src/position.lua crs/src/position.lua")
+shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/src/type.lua crs/src/type.lua")
 shell.run("wget https://raw.githubusercontent.com/sty00A4/craftscript/main/installs/install_cc.lua crs/installs/install_cc.lua")
 if fs.exists("startup.lua") then
     if not args[1] then
