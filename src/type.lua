@@ -248,7 +248,7 @@ local function get(node, context)
             return Union(types)
         end,
     }
-    return (match[metatype(node)] or Nil)()
+    return match[metatype(node)]()
 end
 
 return {
